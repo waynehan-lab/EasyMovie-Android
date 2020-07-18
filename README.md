@@ -1,2 +1,2 @@
 # EasyMovie-Android
-Displays the Android MediaPlayer decoded video in Unity in real time.
+This is a plugin library for the [EasyMovie-Unity](https://github.com/hywenbinger/EasyMovie-Unity) project.

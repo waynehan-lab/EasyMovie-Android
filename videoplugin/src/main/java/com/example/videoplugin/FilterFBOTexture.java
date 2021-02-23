@@ -29,39 +29,40 @@ public class FilterFBOTexture {
                     "}";
 
     static float[] vertexData = {
-            -1f, 1f, // 左上角
-            1f, 1f,  // 右上角
-            -1f, -1f,// 左下角
-            1f, -1f, // 右下角
+            -1f, 1f,
+            1f, 1f,
+            -1f, -1f,
+            1f, -1f,
     };
 
     static float[] textureData = {
-            0f, 0f, // 左上角
-            1f, 0f, // 左下角
-            0f, 1f, // 右上角
-            1f, 1f,  // 右上角
+            0f, 0f,
+            1f, 0f,
+            0f, 1f,
+            1f, 1f,
     };
 
-    private FloatBuffer vertexBuffer;
-    private FloatBuffer textureBuffer;
+    private final FloatBuffer vertexBuffer;
+    private final FloatBuffer textureBuffer;
 
-    private int av_Position;
-    private int af_Position;
-    private int s_Texture;
+    private final int av_Position;
+    private final int af_Position;
+    private final int s_Texture;
 
-    private int program;
+    private final int program;
 
-    private int videoTextureId;
-    private int unityTextureId;
-    private int fboId;
+    private final int fboId;
+    private final int width;
+    private final int height;
+    private final int videoTextureId;
+    private final int unityTextureId;
 
-    private Context context;
-    private int width;
-    private int height;
-
-    public FilterFBOTexture(Context context, int videoTextureId) {
-        this.context = context;
+    public FilterFBOTexture(int width, int height, int unityTextureId, int videoTextureId) {
+        this.width = width;
+        this.height = height;
+        this.unityTextureId = unityTextureId;
         this.videoTextureId = videoTextureId;
+
         fboId = FBOUtils.createFBO();
 
         vertexBuffer = ByteBuffer.allocateDirect(vertexData.length * 4)
@@ -82,45 +83,54 @@ public class FilterFBOTexture {
         s_Texture = GLES20.glGetUniformLocation(program, "s_Texture");
     }
 
-    public void surfaceChanged(int width, int height, int unityTextureId){
-        this.width = width;
-        this.height = height;
-        this.unityTextureId = unityTextureId;
-    }
+    public void draw() {
+        //视口
+        GLES20.glViewport(0, 0, width, height);
 
-    public void draw(){
+        //清除颜色缓冲
+        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+
+        //激活帧缓冲
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboId);
+        //把一个纹理附加到帧缓冲
+        //之后所有的渲染操作将会渲染到当前绑定帧缓冲的附件中
+        //即所有渲染操作的结果将会被储存在unityTextureId对应的纹理图像中
         GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, unityTextureId, 0);
+        //检查帧缓冲是否完整
+        if (GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER) != GLES20.GL_FRAMEBUFFER_COMPLETE) {
+            FBOUtils.log("FrameBuffer error");
+            return;
+        }
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-
+        //激活着色器程序
         GLES20.glUseProgram(program);
 
-        GLES20.glViewport(0, 0, width, height);
-
+        //告诉OpenGL该如何解析顶点数据(顶点坐标)，并启用顶点属性
         GLES20.glEnableVertexAttribArray(av_Position);
-        GLES20.glVertexAttribPointer(av_Position, 2, GLES20.GL_FLOAT, false, 2*4, vertexBuffer);
+        GLES20.glVertexAttribPointer(av_Position, 2, GLES20.GL_FLOAT, false, 2 * 4, vertexBuffer);
 
+        //告诉OpenGL该如何解析顶点数据(纹理坐标)，并启用顶点属性
         GLES20.glEnableVertexAttribArray(af_Position);
-        GLES20.glVertexAttribPointer(af_Position, 2, GLES20.GL_FLOAT, false, 2*4, textureBuffer);
+        GLES20.glVertexAttribPointer(af_Position, 2, GLES20.GL_FLOAT, false, 2 * 4, textureBuffer);
 
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        //激活纹理单元
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE7);
+        //绑定指定纹理到当前激活的纹理单元
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, videoTextureId);
+        //为着色器中定义的采样器指定属于哪个纹理单元；不要忘记在设置uniform变量之前激活着色器程序
+        GLES20.glUniform1i(s_Texture, 7);
 
-        GLES20.glUniform1i(s_Texture, 0);
-
+        //绘制三角带
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 
         GLES20.glDisableVertexAttribArray(av_Position);
-
         GLES20.glDisableVertexAttribArray(af_Position);
-
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
-
+        //激活默认帧缓冲
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
 

@@ -32,10 +32,10 @@ dependencies {
 }
 
 task createDebugJar(type: Copy) {
-    delete 'build/lib/videoplugin_lib-debug.jar'
-    from('build/intermediates/packaged-classes/debug/')
+    delete 'build/lib/videoplugin-lib-debug.jar'
+    from('build/intermediates/aar_main_jar/debug/')
     into('build/lib/')
     include('classes.jar')
-    rename ('classes.jar', 'videoplugin_lib-debug.jar')
+    rename ('classes.jar', 'videoplugin-lib-debug.jar')
 }
 createDebugJar.dependsOn(build)

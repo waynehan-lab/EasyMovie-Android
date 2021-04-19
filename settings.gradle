@@ -1,2 +1,3 @@
+include ':videoplugin_opengles3'
 include ':app', ':videoplugin'
 rootProject.name = 'EasyMovie-Android'

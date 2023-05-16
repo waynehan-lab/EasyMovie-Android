@@ -1,5 +1,7 @@
 package com.pvr.videoplugin;
 
+import android.app.Activity;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.SurfaceTexture;
 import android.graphics.SurfaceTexture.OnFrameAvailableListener;
 import android.media.AudioManager;
@@ -12,13 +14,19 @@ import java.io.IOException;
 
 public class VideoPlugin implements OnFrameAvailableListener {
 
+    private final Activity mActivity;
     private SurfaceTexture mSurfaceTexture;
+    private Surface mSurface;
     private FilterFBOTexture mFilterFBOTexture;
     private MediaPlayer mMediaPlayer;
     private boolean mIsUpdateFrame;
 
+    public VideoPlugin(Activity activity) {
+        mActivity = activity;
+    }
+
     public void start(int unityTextureId, int width, int height) {
-        FBOUtils.log("start");
+        FBOUtils.log("start, unityTextureId=" + unityTextureId);
 
         int videoTextureId = FBOUtils.createOESTextureID();
 
@@ -26,19 +34,46 @@ public class VideoPlugin implements OnFrameAvailableListener {
         mSurfaceTexture.setDefaultBufferSize(width, height);
         mSurfaceTexture.setOnFrameAvailableListener(this);
 
+        mSurface = new Surface(mSurfaceTexture);
+
         mFilterFBOTexture = new FilterFBOTexture(width, height, unityTextureId, videoTextureId);
 
         initMediaPlayer();
     }
 
+    public void release() {
+        FBOUtils.log("release");
+        if (mMediaPlayer != null) {
+            mMediaPlayer.stop();
+            mMediaPlayer.reset();
+            mMediaPlayer.release();
+            mMediaPlayer = null;
+        }
+        if (mSurface != null) {
+            mSurface.release();
+            mSurface = null;
+        }
+        if (mSurfaceTexture != null) {
+            mSurfaceTexture.release();
+            mSurfaceTexture = null;
+        }
+        if (mFilterFBOTexture != null) {
+            mFilterFBOTexture.release();
+            mFilterFBOTexture = null;
+        }
+        mIsUpdateFrame = false;
+    }
+
     private void initMediaPlayer() {
         mMediaPlayer = new MediaPlayer();
-        mMediaPlayer.setSurface(new Surface(mSurfaceTexture));
+        mMediaPlayer.setSurface(mSurface);
         try {
-            final File file = new File("/sdcard/test.mp4");
+            AssetFileDescriptor fd = mActivity.getAssets().openFd("test.mp4");
+//            final File file = new File("/sdcard/test.mp4");
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mMediaPlayer.setLooping(true);
-            mMediaPlayer.setDataSource(Uri.fromFile(file).toString());
+//            mMediaPlayer.setDataSource(Uri.fromFile(file).toString());
+            mMediaPlayer.setDataSource(fd.getFileDescriptor(), fd.getStartOffset(), fd.getLength());
             mMediaPlayer.prepareAsync();
         } catch (IOException e) {
             e.printStackTrace();

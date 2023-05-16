@@ -40,7 +40,7 @@ public class FilterFBOTexture {
             -1f, -1f,
             1f, -1f,
     };
-    private final FloatBuffer vertexBuffer;
+    private FloatBuffer vertexBuffer;
     private final int vertexVBO;
 
     // 纹理坐标
@@ -50,7 +50,7 @@ public class FilterFBOTexture {
             0f, 1f,
             1f, 1f,
     };
-    private final FloatBuffer textureBuffer;
+    private FloatBuffer textureBuffer;
     private final int textureVBO;
 
     private final int shaderProgram;
@@ -93,6 +93,26 @@ public class FilterFBOTexture {
         a_Position = GLES30.glGetAttribLocation(shaderProgram, "a_Position");
         a_TexCoord = GLES30.glGetAttribLocation(shaderProgram, "a_TexCoord");
         s_Texture = GLES30.glGetUniformLocation(shaderProgram, "s_Texture");
+    }
+
+    void release() {
+        int[] textures = new int[2];
+        textures[0] = oesTextureId;
+        textures[1] = unityTextureId;
+        GLES20.glDeleteTextures(1, textures, 0);
+
+        int[] vbo = new int[2];
+        vbo[0] = vertexVBO;
+        vbo[1] = textureVBO;
+        GLES30.glDeleteBuffers(vbo.length, vbo, 0);
+        vertexBuffer.clear();
+        textureBuffer.clear();
+
+        int[] fbo = new int[1];
+        fbo[0] = FBO;
+        GLES30.glDeleteFramebuffers(fbo.length, fbo, 0);
+
+        GLES30.glDeleteProgram(shaderProgram);
     }
 
     void draw() {
@@ -141,6 +161,7 @@ public class FilterFBOTexture {
         GLES30.glDisableVertexAttribArray(a_Position);
         GLES30.glDisableVertexAttribArray(a_TexCoord);
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
     }
 
